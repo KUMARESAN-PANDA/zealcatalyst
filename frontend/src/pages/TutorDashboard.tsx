@@ -8,7 +8,8 @@ import {
   Wallet, TrendingUp, ArrowDownCircle, CreditCard, Building, Smartphone
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { tutorsAPI, availabilityAPI, bookingsAPI, withdrawalAPI } from '../services/api';
+import { tutorsAPI, availabilityAPI, bookingsAPI, withdrawalAPI, uploadAPI } from '../services/api';
+import ImageUpload from '../components/ImageUpload';
 import type { TutorProfile } from '../types';
 import type { AvailabilitySettings, WeeklySchedule, TimeSlot, CalendarDay, BlockedDate, BookingResponse, TutorStats, WithdrawalResponse } from '../services/api';
 
@@ -504,6 +505,36 @@ const TutorDashboard: React.FC = () => {
           >
             {/* Main Profile Form */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Profile Photo Card */}
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <User className="w-5 h-5 text-primary-600" />
+                  Profile Photo
+                </h2>
+                <div className="flex items-start gap-6">
+                  <ImageUpload
+                    currentImage={profile.avatar}
+                    onUploadSuccess={(url) => {
+                      setProfile(prev => ({ ...prev, avatar: url }));
+                      setMessage({ type: 'success', text: 'Profile photo updated!' });
+                      setTimeout(() => setMessage(null), 3000);
+                    }}
+                    type="tutor"
+                  />
+                  <div className="flex-1">
+                    <p className="text-gray-600 text-sm mb-3">
+                      Upload a professional photo to make a great first impression. Tutors with photos get 40% more bookings!
+                    </p>
+                    <ul className="text-xs text-gray-500 space-y-1">
+                      <li>• Use a clear, well-lit photo of your face</li>
+                      <li>• Smile and look approachable</li>
+                      <li>• Avoid group photos or logos</li>
+                      <li>• Minimum 200x200 pixels recommended</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
               {/* Basic Info Card */}
               <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
                 <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -789,6 +820,7 @@ const TutorDashboard: React.FC = () => {
                 <h3 className="text-lg font-bold mb-4">Profile Completion</h3>
                 <div className="space-y-3">
                   {[
+                    { label: 'Profile Photo', done: !!profile.avatar },
                     { label: 'Headline', done: !!profile.headline },
                     { label: 'Bio', done: !!profile.bio },
                     { label: 'Education', done: !!profile.education },

@@ -33,6 +33,14 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
 
+    # MinIO Settings
+    MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_ACCESS_KEY: str = "zealadmin"
+    MINIO_SECRET_KEY: str = "ZealMinio@2026"
+    MINIO_SECURE: bool = False
+    MINIO_BUCKET: str = "tutor-images"
+    MINIO_PUBLIC_URL: Optional[str] = None  # External URL for accessing images
+
     class Config:
         env_file = ".env"
 

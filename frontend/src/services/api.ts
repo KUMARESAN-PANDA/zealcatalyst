@@ -732,6 +732,43 @@ export interface WithdrawalStats {
   total_requests: number;
 }
 
+// Upload API Types
+export interface UploadResponse {
+  success: boolean;
+  url: string;
+  message: string;
+}
+
+// Upload API
+export const uploadAPI = {
+  uploadAvatar: async (file: File): Promise<UploadResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/uploads/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  uploadTutorImage: async (file: File): Promise<UploadResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/uploads/tutor-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  deleteAvatar: async (): Promise<{ success: boolean; message: string }> => {
+    const response = await api.delete('/uploads/avatar');
+    return response.data;
+  },
+};
+
 // Withdrawal API
 export const withdrawalAPI = {
   // Tutor endpoints
