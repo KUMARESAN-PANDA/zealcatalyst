@@ -10,6 +10,7 @@ import type { TutorProfile } from '../types';
 import { tutorsAPI } from '../services/api';
 import BookingModal from '../components/BookingModal';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
 
 const subjects = [
   'Mathematics', 'Physics', 'Chemistry', 'Biology', 'English',
@@ -27,6 +28,7 @@ const languages = ['English', 'Spanish', 'French', 'German', 'Mandarin', 'Hindi'
 // Enhanced Tutor Card Component
 const TutorCard: React.FC<{ tutor: TutorProfile; index: number; onBookTrial: (tutor: TutorProfile) => void }> = ({ tutor, index, onBookTrial }) => {
   const [isLiked, setIsLiked] = useState(false);
+  const { formatPrice } = useCurrency();
 
   return (
     <motion.div
@@ -165,11 +167,27 @@ const TutorCard: React.FC<{ tutor: TutorProfile; index: number; onBookTrial: (tu
               </button>
 
               {/* Price */}
-              <div className="text-center my-4">
-                <div className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
-                  ${tutor.hourly_rate}
-                </div>
-                <div className="text-sm text-gray-500">per hour</div>
+              <div className="text-center my-4 space-y-2">
+                {tutor.offers_private && (
+                  <div>
+                    <div className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
+                      {formatPrice(tutor.hourly_rate)}
+                    </div>
+                    <div className="text-xs text-gray-500 flex items-center justify-center gap-1">
+                      <Video className="w-3 h-3" /> 1-on-1 /hr
+                    </div>
+                  </div>
+                )}
+                {tutor.offers_group && tutor.group_hourly_rate && (
+                  <div className="pt-1 border-t border-gray-100">
+                    <div className="text-lg font-bold text-secondary-600">
+                      {formatPrice(tutor.group_hourly_rate)}
+                    </div>
+                    <div className="text-xs text-gray-500 flex items-center justify-center gap-1">
+                      <Users className="w-3 h-3" /> Group /hr
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}

@@ -38,6 +38,9 @@ def create_booking_response(b: Booking) -> BookingResponse:
     )
 
 
+# Currency conversion rate (INR to USD)
+INR_TO_USD_RATE = 0.012
+
 @router.post("", response_model=BookingResponse)
 async def create_booking(
     booking_data: BookingCreate,
@@ -48,7 +51,21 @@ async def create_booking(
     if not tutor:
         raise HTTPException(status_code=404, detail="Tutor not found")
 
-    session_price = tutor.hourly_rate * (booking_data.duration_minutes / 60)
+    # Get the correct hourly rate based on session type
+    if booking_data.session_type.value == "group":
+        # Use group rate if available, otherwise calculate 60% of private rate
+        hourly_rate = tutor.group_hourly_rate if tutor.group_hourly_rate else tutor.hourly_rate * 0.6
+    else:
+        hourly_rate = tutor.hourly_rate
+
+    # Calculate session price in INR (base currency)
+    session_price_inr = hourly_rate * (booking_data.duration_minutes / 60)
+
+    # Convert to requested currency if needed
+    if booking_data.currency == "USD":
+        session_price = round(session_price_inr * INR_TO_USD_RATE, 2)
+    else:
+        session_price = session_price_inr
 
     booking = Booking(
         student_id=str(current_user.id),
@@ -58,7 +75,7 @@ async def create_booking(
         scheduled_at=booking_data.scheduled_at,
         duration_minutes=booking_data.duration_minutes,
         price=session_price,
-        currency=tutor.currency,
+        currency=booking_data.currency,
         notes=booking_data.notes,
         student_name=current_user.full_name,
         tutor_name=tutor.full_name,
@@ -74,9 +91,9 @@ async def create_booking(
             student_id=str(current_user.id),
             tutor_id=booking_data.tutor_id,
             session_amount=session_price,
-            currency=tutor.currency
+            currency=booking_data.currency
         )
-        print(f"[Payment] Created payment {payment.id} - Commission: ${payment.commission_fee}, Admission: ${payment.admission_fee}")
+        print(f"[Payment] Created payment {payment.id} - Commission: {payment.commission_fee}, Admission: {payment.admission_fee}")
     except Exception as e:
         print(f"[Payment] Failed to create payment record: {e}")
 

@@ -23,8 +23,9 @@ class TutorProfile(Document):
     certifications: Optional[List[str]] = []
 
     # Teaching Details
-    hourly_rate: float = 0.0
-    currency: str = "USD"
+    hourly_rate: float = 0.0  # Rate for 1-on-1 sessions
+    group_hourly_rate: float = 0.0  # Rate for group sessions
+    currency: str = "INR"
     languages: List[str] = ["English"]
     teaching_style: Optional[str] = None
     subjects: List[str] = []

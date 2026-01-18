@@ -9,6 +9,7 @@ import {
 import { tutorsAPI } from '../services/api';
 import type { TutorProfile as TutorProfileType } from '../types';
 import BookingModal from '../components/BookingModal';
+import { useCurrency } from '../context/CurrencyContext';
 
 const TutorProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +17,7 @@ const TutorProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     const fetchTutor = async () => {
@@ -38,7 +40,8 @@ const TutorProfile: React.FC = () => {
           education: 'PhD in Applied Mathematics - MIT',
           certifications: ['Certified Math Educator', 'Advanced Physics Teaching'],
           hourly_rate: 75,
-          currency: 'USD',
+          group_hourly_rate: 45,
+          currency: 'INR',
           languages: ['English', 'Spanish'],
           teaching_style: 'I use a combination of visual aids, real-world examples, and interactive problem-solving to make learning engaging and effective.',
           subjects: ['Mathematics', 'Physics', 'Calculus', 'Statistics', 'Algebra'],
@@ -306,12 +309,32 @@ const TutorProfile: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               className="bg-white rounded-2xl border border-gray-100 shadow-xl p-6 sticky top-28"
             >
-              {/* Price */}
-              <div className="text-center mb-6">
-                <div className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
-                  ${tutor.hourly_rate}
-                </div>
-                <div className="text-gray-500">per hour</div>
+              {/* Pricing */}
+              <div className="mb-6 space-y-3">
+                {tutor.offers_private && (
+                  <div className="text-center p-4 bg-primary-50 rounded-xl border border-primary-100">
+                    <div className="flex items-center justify-center gap-2 text-sm text-primary-600 font-medium mb-1">
+                      <Video className="w-4 h-4" />
+                      1-on-1 Session
+                    </div>
+                    <div className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
+                      {formatPrice(tutor.hourly_rate)}
+                    </div>
+                    <div className="text-gray-500 text-sm">per hour</div>
+                  </div>
+                )}
+                {tutor.offers_group && tutor.group_hourly_rate && (
+                  <div className="text-center p-4 bg-secondary-50 rounded-xl border border-secondary-100">
+                    <div className="flex items-center justify-center gap-2 text-sm text-secondary-600 font-medium mb-1">
+                      <Users className="w-4 h-4" />
+                      Group Session
+                    </div>
+                    <div className="text-2xl font-bold text-secondary-600">
+                      {formatPrice(tutor.group_hourly_rate)}
+                    </div>
+                    <div className="text-gray-500 text-sm">per hour</div>
+                  </div>
+                )}
               </div>
 
               {/* Session Types */}

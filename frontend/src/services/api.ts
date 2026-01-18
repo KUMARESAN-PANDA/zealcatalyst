@@ -220,6 +220,7 @@ export const bookingsAPI = {
     scheduled_at: string;
     duration_minutes: number;
     notes?: string;
+    currency?: string;
   }): Promise<BookingResponse> => {
     const response = await api.post('/bookings', data);
     return response.data;

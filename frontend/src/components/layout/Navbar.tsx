@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, ChevronDown, User, LogOut, BookOpen } from 'lucide-react';
+import { Menu, X, ChevronDown, User, LogOut, BookOpen, Globe } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useCurrency } from '../../context/CurrencyContext';
+import type { CurrencyCode } from '../../context/CurrencyContext';
 import NotificationBell from '../NotificationBell';
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showCurrencyMenu, setShowCurrencyMenu] = useState(false);
   const { user, logout } = useAuth();
+  const { currency, setCurrency, currencies } = useCurrency();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -46,8 +50,43 @@ const Navbar: React.FC = () => {
             </Link>
           </div>
 
-          {/* Auth Buttons */}
+          {/* Currency & Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Currency Selector */}
+            <div className="relative">
+              <button
+                onClick={() => setShowCurrencyMenu(!showCurrencyMenu)}
+                className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-700"
+              >
+                <Globe className="w-4 h-4" />
+                <span className="font-medium">{currencies[currency].symbol} {currency}</span>
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showCurrencyMenu && (
+                <div className="absolute right-0 mt-2 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                  {(Object.keys(currencies) as CurrencyCode[]).map((code) => (
+                    <button
+                      key={code}
+                      onClick={() => {
+                        setCurrency(code);
+                        setShowCurrencyMenu(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-4 py-2 hover:bg-gray-50 transition-colors ${
+                        currency === code ? 'text-primary-600 bg-primary-50' : 'text-gray-700'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="font-medium">{currencies[code].symbol}</span>
+                        <span>{code}</span>
+                      </span>
+                      {currency === code && <span className="text-primary-600">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {user ? (
               <>
                 {/* Notification Bell */}

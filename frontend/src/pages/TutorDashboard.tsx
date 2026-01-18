@@ -39,6 +39,7 @@ const TutorDashboard: React.FC = () => {
     experience_years: 0,
     education: '',
     hourly_rate: 0,
+    group_hourly_rate: 0,
     languages: ['English'],
     subjects: [],
     country: '',
@@ -534,45 +535,76 @@ const TutorDashboard: React.FC = () => {
                   Pricing & Sessions
                 </h2>
 
+                {/* Session Types */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Session Types You Offer</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={profile.offers_private}
+                        onChange={(e) => setProfile(prev => ({ ...prev, offers_private: e.target.checked }))}
+                        className="w-5 h-5 rounded text-primary-600 focus:ring-primary-500"
+                      />
+                      <Video className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm font-medium">1-on-1 Sessions</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={profile.offers_group}
+                        onChange={(e) => setProfile(prev => ({ ...prev, offers_group: e.target.checked }))}
+                        className="w-5 h-5 rounded text-primary-600 focus:ring-primary-500"
+                      />
+                      <Users className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm font-medium">Group Sessions</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Pricing Grid */}
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Hourly Rate (USD)</label>
+                  {/* 1-on-1 Rate */}
+                  <div className={`p-4 rounded-xl border-2 transition-all ${profile.offers_private ? 'border-primary-200 bg-primary-50/50' : 'border-gray-200 bg-gray-50 opacity-60'}`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Video className="w-5 h-5 text-primary-600" />
+                      <label className="text-sm font-semibold text-gray-900">1-on-1 Session Rate</label>
+                    </div>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
                       <input
                         type="number"
                         value={profile.hourly_rate || 0}
                         onChange={(e) => setProfile(prev => ({ ...prev, hourly_rate: parseFloat(e.target.value) || 0 }))}
                         min="0"
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        disabled={!profile.offers_private}
+                        placeholder="Enter rate per hour"
+                        className="w-full pl-8 pr-16 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                       />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">/hour</span>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Session Types</label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={profile.offers_private}
-                          onChange={(e) => setProfile(prev => ({ ...prev, offers_private: e.target.checked }))}
-                          className="w-5 h-5 rounded text-primary-600 focus:ring-primary-500"
-                        />
-                        <Video className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm">1-on-1</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={profile.offers_group}
-                          onChange={(e) => setProfile(prev => ({ ...prev, offers_group: e.target.checked }))}
-                          className="w-5 h-5 rounded text-primary-600 focus:ring-primary-500"
-                        />
-                        <Users className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm">Group</span>
-                      </label>
+                  {/* Group Rate */}
+                  <div className={`p-4 rounded-xl border-2 transition-all ${profile.offers_group ? 'border-secondary-200 bg-secondary-50/50' : 'border-gray-200 bg-gray-50 opacity-60'}`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Users className="w-5 h-5 text-secondary-600" />
+                      <label className="text-sm font-semibold text-gray-900">Group Session Rate</label>
                     </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+                      <input
+                        type="number"
+                        value={profile.group_hourly_rate || 0}
+                        onChange={(e) => setProfile(prev => ({ ...prev, group_hourly_rate: parseFloat(e.target.value) || 0 }))}
+                        min="0"
+                        disabled={!profile.offers_group}
+                        placeholder="Enter rate per hour"
+                        className="w-full pl-8 pr-16 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">/hour</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">Rate per student in group sessions</p>
                   </div>
                 </div>
               </div>

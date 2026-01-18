@@ -10,6 +10,7 @@ class BookingCreate(BaseModel):
     scheduled_at: datetime
     duration_minutes: int = 60
     notes: Optional[str] = None
+    currency: str = "INR"  # Currency for payment (INR or USD)
 
 class BookingUpdate(BaseModel):
     status: Optional[BookingStatus] = None

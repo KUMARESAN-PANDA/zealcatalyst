@@ -22,6 +22,7 @@ export interface TutorProfile {
   education?: string;
   certifications: string[];
   hourly_rate: number;
+  group_hourly_rate?: number;
   currency: string;
   languages: string[];
   teaching_style?: string;

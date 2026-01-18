@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { CurrencyProvider } from './context/CurrencyContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Home from './pages/Home';
@@ -18,8 +19,9 @@ import AdminDashboard from './pages/AdminDashboard';
 function App() {
   return (
     <AuthProvider>
-      <NotificationProvider>
-        <Router>
+      <CurrencyProvider>
+        <NotificationProvider>
+          <Router>
         <div className="min-h-screen flex flex-col">
           <Navbar />
           <main className="flex-1">
@@ -39,8 +41,9 @@ function App() {
           </main>
           <Footer />
         </div>
-        </Router>
-      </NotificationProvider>
+          </Router>
+        </NotificationProvider>
+      </CurrencyProvider>
     </AuthProvider>
   );
 }

@@ -8,6 +8,7 @@ import { availabilityAPI, bookingsAPI, paymentsAPI } from '../services/api';
 import type { TutorProfile } from '../types';
 import type { CalendarDay } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { useNavigate } from 'react-router-dom';
 
 // Razorpay types
@@ -79,7 +80,16 @@ const TIME_SLOTS = [
 
 const BookingModal: React.FC<BookingModalProps> = ({ tutor, onClose }) => {
   const { user } = useAuth();
+  const { formatPrice, currency } = useCurrency();
   const navigate = useNavigate();
+
+  // Get the price based on session type
+  const getSessionPrice = (type: 'private' | 'group'): number => {
+    if (type === 'group') {
+      return tutor.group_hourly_rate || Math.round(tutor.hourly_rate * 0.6);
+    }
+    return tutor.hourly_rate;
+  };
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarData, setCalendarData] = useState<CalendarDay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,13 +216,14 @@ const BookingModal: React.FC<BookingModalProps> = ({ tutor, onClose }) => {
 
     setBooking(true);
     try {
-      // Step 1: Create booking
+      // Step 1: Create booking with selected currency
       const bookingResponse = await bookingsAPI.create({
         tutor_id: tutor.id,
         scheduled_at: `${selectedDate}T${selectedTime}:00`,
         session_type: sessionType,
         duration_minutes: 60,
-        subject: tutor.subjects[0] || 'General'
+        subject: tutor.subjects[0] || 'General',
+        currency: currency
       });
 
       // Step 2: Create Razorpay order
@@ -411,7 +422,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ tutor, onClose }) => {
                           <div className={`font-medium ${sessionType === 'private' ? 'text-primary-900' : 'text-gray-900'}`}>
                             1-on-1
                           </div>
-                          <div className="text-xs text-gray-500">₹{tutor.hourly_rate}/hr</div>
+                          <div className="text-xs text-gray-500">{formatPrice(getSessionPrice('private'))}/hr</div>
                         </div>
                       </button>
                     )}
@@ -429,7 +440,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ tutor, onClose }) => {
                           <div className={`font-medium ${sessionType === 'group' ? 'text-primary-900' : 'text-gray-900'}`}>
                             Group
                           </div>
-                          <div className="text-xs text-gray-500">₹{Math.round(tutor.hourly_rate * 0.6)}/hr</div>
+                          <div className="text-xs text-gray-500">{formatPrice(getSessionPrice('group'))}/hr</div>
                         </div>
                       </button>
                     )}
@@ -595,7 +606,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ tutor, onClose }) => {
                     <div className="border-t border-gray-200 pt-4 flex items-center justify-between">
                       <span className="text-gray-900 font-semibold">Total</span>
                       <span className="text-2xl font-bold text-primary-600">
-                        ₹{sessionType === 'private' ? tutor.hourly_rate : Math.round(tutor.hourly_rate * 0.6)}
+                        {formatPrice(getSessionPrice(sessionType))}
                       </span>
                     </div>
                   </div>
