@@ -128,7 +128,7 @@ const TutorDashboard: React.FC = () => {
   const [assignmentForm, setAssignmentForm] = useState({ title: '', description: '', subject: '', due_date: '', max_marks: 100 });
 
   // Feedback state
-  const [feedbacks, setFeedbacks] = useState<StudentFeedback[]>([]);
+  const [feedbacks] = useState<StudentFeedback[]>([]);
 
   useEffect(() => {
     fetchData();

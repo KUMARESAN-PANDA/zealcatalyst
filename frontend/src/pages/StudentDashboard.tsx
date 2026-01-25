@@ -53,8 +53,8 @@ const StudentDashboard: React.FC = () => {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   // New state for recordings, materials, and feedback
-  const [recordings, setRecordings] = useState<RecordedSession[]>([]);
-  const [materials, setMaterials] = useState<StudyMaterial[]>([]);
+  const [recordings] = useState<RecordedSession[]>([]);
+  const [materials] = useState<StudyMaterial[]>([]);
   const [myRatings, setMyRatings] = useState<TutorRating[]>([]);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratingForm, setRatingForm] = useState({ tutor_name: '', subject: '', rating: 5, comment: '' });
