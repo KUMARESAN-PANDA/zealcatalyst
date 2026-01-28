@@ -21,28 +21,6 @@ interface RecordedSession {
   thumbnail?: string;
 }
 
-interface TutorRating {
-  id: string;
-  tutor_id: string;
-  tutor_name: string;
-  subject: string;
-  rating: number;
-  comment: string;
-  session_date: string;
-  created_at: string;
-}
-
-interface StudyMaterial {
-  id: string;
-  title: string;
-  description: string;
-  subject: string;
-  tutor_name: string;
-  file_url?: string;
-  file_type: string;
-  created_at: string;
-}
-
 const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<BookingResponse[]>([]);
@@ -700,7 +678,7 @@ const StudentDashboard: React.FC = () => {
                       </div>
                       <p className="text-gray-700 mt-3">{rating.comment}</p>
                       <p className="text-xs text-gray-500 mt-2">
-                        Session: {new Date(rating.session_date).toLocaleDateString()} |
+                        {rating.session_date && `Session: ${new Date(rating.session_date).toLocaleDateString()} | `}
                         Reviewed: {new Date(rating.created_at).toLocaleDateString()}
                       </p>
                     </div>

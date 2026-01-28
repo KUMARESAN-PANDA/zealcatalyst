@@ -28,40 +28,7 @@ const SUBJECTS_LIST = [
 
 const LANGUAGES_LIST = ['English', 'Spanish', 'French', 'German', 'Mandarin', 'Hindi', 'Arabic', 'Portuguese', 'Japanese', 'Korean'];
 
-// Types for new features
-interface Material {
-  id: string;
-  title: string;
-  description: string;
-  subject: string;
-  file_url?: string;
-  file_name?: string;
-  created_at: string;
-}
-
-interface Assignment {
-  id: string;
-  title: string;
-  description: string;
-  subject: string;
-  due_date: string;
-  student_id?: string;
-  student_name?: string;
-  status: 'pending' | 'submitted' | 'graded';
-  max_marks: number;
-  obtained_marks?: number;
-  created_at: string;
-}
-
-interface StudentFeedback {
-  id: string;
-  student_name: string;
-  subject: string;
-  rating: number;
-  comment: string;
-  session_date: string;
-  created_at: string;
-}
+// Types are now imported from api.ts
 
 const TutorDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -1907,7 +1874,7 @@ const TutorDashboard: React.FC = () => {
                           </div>
                           <p className="text-gray-700 mt-3">{feedback.comment}</p>
                           <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
-                            <span>Session: {new Date(feedback.session_date).toLocaleDateString()}</span>
+                            {feedback.session_date && <span>Session: {new Date(feedback.session_date).toLocaleDateString()}</span>}
                             <span>Reviewed: {new Date(feedback.created_at).toLocaleDateString()}</span>
                           </div>
                         </div>
