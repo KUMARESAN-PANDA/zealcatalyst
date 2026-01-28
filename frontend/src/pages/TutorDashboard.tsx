@@ -9,10 +9,10 @@ import {
   FileText, ClipboardList, MessageSquare, Upload, Download, Trash2, Star
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { tutorsAPI, availabilityAPI, bookingsAPI, withdrawalAPI } from '../services/api';
+import { tutorsAPI, availabilityAPI, bookingsAPI, withdrawalAPI, materialsAPI } from '../services/api';
 import ImageUpload from '../components/ImageUpload';
 import type { TutorProfile } from '../types';
-import type { AvailabilitySettings, WeeklySchedule, TimeSlot, CalendarDay, BlockedDate, BookingResponse, TutorStats, WithdrawalResponse } from '../services/api';
+import type { AvailabilitySettings, WeeklySchedule, TimeSlot, CalendarDay, BlockedDate, BookingResponse, TutorStats, WithdrawalResponse, MaterialResponse, AssignmentResponse, RatingResponse } from '../services/api';
 
 const DAYS_OF_WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -118,17 +118,20 @@ const TutorDashboard: React.FC = () => {
   const [withdrawalLoading, setWithdrawalLoading] = useState(false);
 
   // Materials state
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [materials, setMaterials] = useState<MaterialResponse[]>([]);
   const [showMaterialForm, setShowMaterialForm] = useState(false);
   const [materialForm, setMaterialForm] = useState({ title: '', description: '', subject: '' });
+  const [materialFile, setMaterialFile] = useState<File | null>(null);
+  const [materialLoading, setMaterialLoading] = useState(false);
 
   // Assignments state
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentResponse[]>([]);
   const [showAssignmentForm, setShowAssignmentForm] = useState(false);
   const [assignmentForm, setAssignmentForm] = useState({ title: '', description: '', subject: '', due_date: '', max_marks: 100 });
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
 
   // Feedback state
-  const [feedbacks] = useState<StudentFeedback[]>([]);
+  const [feedbacks, setFeedbacks] = useState<RatingResponse[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -141,7 +144,43 @@ const TutorDashboard: React.FC = () => {
     if (activeTab === 'earnings') {
       fetchEarnings();
     }
+    if (activeTab === 'materials') {
+      fetchMaterials();
+    }
+    if (activeTab === 'assignments') {
+      fetchAssignments();
+    }
+    if (activeTab === 'feedback') {
+      fetchFeedbacks();
+    }
   }, [currentMonth, activeTab]);
+
+  const fetchMaterials = async () => {
+    try {
+      const data = await materialsAPI.getMaterials();
+      setMaterials(data);
+    } catch (error) {
+      console.error('Failed to fetch materials:', error);
+    }
+  };
+
+  const fetchAssignments = async () => {
+    try {
+      const data = await materialsAPI.getAssignments();
+      setAssignments(data);
+    } catch (error) {
+      console.error('Failed to fetch assignments:', error);
+    }
+  };
+
+  const fetchFeedbacks = async () => {
+    try {
+      const data = await materialsAPI.getMyRatings();
+      setFeedbacks(data);
+    } catch (error) {
+      console.error('Failed to fetch feedbacks:', error);
+    }
+  };
 
   const fetchEarnings = async () => {
     try {
@@ -1439,38 +1478,65 @@ const TutorDashboard: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Upload File (PDF, DOC, etc.)</label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-primary-400 transition-colors cursor-pointer">
+                      <label className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-primary-400 transition-colors cursor-pointer block">
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.doc,.docx,.ppt,.pptx"
+                          onChange={(e) => setMaterialFile(e.target.files?.[0] || null)}
+                        />
                         <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
-                        <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX, PPT up to 10MB</p>
-                      </div>
+                        {materialFile ? (
+                          <p className="text-sm text-primary-600 font-medium">{materialFile.name}</p>
+                        ) : (
+                          <>
+                            <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
+                            <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX, PPT up to 10MB</p>
+                          </>
+                        )}
+                      </label>
                     </div>
                   </div>
                   <div className="flex gap-3 mt-6">
                     <button
-                      onClick={() => setShowMaterialForm(false)}
+                      onClick={() => {
+                        setShowMaterialForm(false);
+                        setMaterialFile(null);
+                      }}
                       className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={() => {
-                        // Add material logic here
-                        const newMaterial: Material = {
-                          id: Date.now().toString(),
-                          ...materialForm,
-                          created_at: new Date().toISOString()
-                        };
-                        setMaterials([newMaterial, ...materials]);
-                        setMaterialForm({ title: '', description: '', subject: '' });
-                        setShowMaterialForm(false);
-                        setMessage({ type: 'success', text: 'Material added successfully!' });
-                        setTimeout(() => setMessage(null), 3000);
+                      onClick={async () => {
+                        setMaterialLoading(true);
+                        try {
+                          const formData = new FormData();
+                          formData.append('title', materialForm.title);
+                          formData.append('description', materialForm.description);
+                          formData.append('subject', materialForm.subject);
+                          if (materialFile) {
+                            formData.append('file', materialFile);
+                          }
+                          const newMaterial = await materialsAPI.createMaterial(formData);
+                          setMaterials([newMaterial, ...materials]);
+                          setMaterialForm({ title: '', description: '', subject: '' });
+                          setMaterialFile(null);
+                          setShowMaterialForm(false);
+                          setMessage({ type: 'success', text: 'Material added successfully!' });
+                          setTimeout(() => setMessage(null), 3000);
+                        } catch (error) {
+                          console.error('Failed to add material:', error);
+                          setMessage({ type: 'error', text: 'Failed to add material. Please try again.' });
+                          setTimeout(() => setMessage(null), 3000);
+                        } finally {
+                          setMaterialLoading(false);
+                        }
                       }}
-                      disabled={!materialForm.title || !materialForm.subject}
+                      disabled={!materialForm.title || !materialForm.subject || materialLoading}
                       className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Add Material
+                      {materialLoading ? 'Adding...' : 'Add Material'}
                     </button>
                   </div>
                 </motion.div>
@@ -1513,11 +1579,29 @@ const TutorDashboard: React.FC = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
-                            <Download className="w-5 h-5" />
-                          </button>
+                          {material.file_url && (
+                            <a
+                              href={material.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                            >
+                              <Download className="w-5 h-5" />
+                            </a>
+                          )}
                           <button
-                            onClick={() => setMaterials(materials.filter(m => m.id !== material.id))}
+                            onClick={async () => {
+                              try {
+                                await materialsAPI.deleteMaterial(material.id);
+                                setMaterials(materials.filter(m => m.id !== material.id));
+                                setMessage({ type: 'success', text: 'Material deleted successfully!' });
+                                setTimeout(() => setMessage(null), 3000);
+                              } catch (error) {
+                                console.error('Failed to delete material:', error);
+                                setMessage({ type: 'error', text: 'Failed to delete material.' });
+                                setTimeout(() => setMessage(null), 3000);
+                              }
+                            }}
                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-5 h-5" />
@@ -1626,23 +1710,33 @@ const TutorDashboard: React.FC = () => {
                       Cancel
                     </button>
                     <button
-                      onClick={() => {
-                        const newAssignment: Assignment = {
-                          id: Date.now().toString(),
-                          ...assignmentForm,
-                          status: 'pending',
-                          created_at: new Date().toISOString()
-                        };
-                        setAssignments([newAssignment, ...assignments]);
-                        setAssignmentForm({ title: '', description: '', subject: '', due_date: '', max_marks: 100 });
-                        setShowAssignmentForm(false);
-                        setMessage({ type: 'success', text: 'Assignment created successfully!' });
-                        setTimeout(() => setMessage(null), 3000);
+                      onClick={async () => {
+                        setAssignmentLoading(true);
+                        try {
+                          const newAssignment = await materialsAPI.createAssignment({
+                            title: assignmentForm.title,
+                            description: assignmentForm.description,
+                            subject: assignmentForm.subject,
+                            due_date: assignmentForm.due_date,
+                            max_marks: assignmentForm.max_marks
+                          });
+                          setAssignments([newAssignment, ...assignments]);
+                          setAssignmentForm({ title: '', description: '', subject: '', due_date: '', max_marks: 100 });
+                          setShowAssignmentForm(false);
+                          setMessage({ type: 'success', text: 'Assignment created successfully!' });
+                          setTimeout(() => setMessage(null), 3000);
+                        } catch (error) {
+                          console.error('Failed to create assignment:', error);
+                          setMessage({ type: 'error', text: 'Failed to create assignment. Please try again.' });
+                          setTimeout(() => setMessage(null), 3000);
+                        } finally {
+                          setAssignmentLoading(false);
+                        }
                       }}
-                      disabled={!assignmentForm.title || !assignmentForm.subject || !assignmentForm.due_date}
+                      disabled={!assignmentForm.title || !assignmentForm.subject || !assignmentForm.due_date || assignmentLoading}
                       className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Create Assignment
+                      {assignmentLoading ? 'Creating...' : 'Create Assignment'}
                     </button>
                   </div>
                 </motion.div>
@@ -1698,7 +1792,18 @@ const TutorDashboard: React.FC = () => {
                             {assignment.status}
                           </span>
                           <button
-                            onClick={() => setAssignments(assignments.filter(a => a.id !== assignment.id))}
+                            onClick={async () => {
+                              try {
+                                await materialsAPI.deleteAssignment(assignment.id);
+                                setAssignments(assignments.filter(a => a.id !== assignment.id));
+                                setMessage({ type: 'success', text: 'Assignment deleted successfully!' });
+                                setTimeout(() => setMessage(null), 3000);
+                              } catch (error) {
+                                console.error('Failed to delete assignment:', error);
+                                setMessage({ type: 'error', text: 'Failed to delete assignment.' });
+                                setTimeout(() => setMessage(null), 3000);
+                              }
+                            }}
                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-5 h-5" />

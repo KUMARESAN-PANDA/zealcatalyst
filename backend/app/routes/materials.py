@@ -1,0 +1,360 @@
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from typing import List, Optional
+from datetime import datetime
+from pydantic import BaseModel
+from app.models.material import Material, Assignment, TutorRating
+from app.models.user import User
+from app.routes.auth import get_current_user
+from app.services.minio_service import minio_service
+
+router = APIRouter()
+
+
+# ============== SCHEMAS ==============
+
+class MaterialCreate(BaseModel):
+    title: str
+    description: str
+    subject: str
+
+
+class MaterialResponse(BaseModel):
+    id: str
+    tutor_id: str
+    tutor_name: str
+    title: str
+    description: str
+    subject: str
+    file_url: Optional[str] = None
+    file_name: Optional[str] = None
+    file_type: Optional[str] = None
+    created_at: datetime
+
+
+class AssignmentCreate(BaseModel):
+    title: str
+    description: str
+    subject: str
+    due_date: datetime
+    max_marks: int = 100
+    student_id: Optional[str] = None
+
+
+class AssignmentResponse(BaseModel):
+    id: str
+    tutor_id: str
+    tutor_name: str
+    title: str
+    description: str
+    subject: str
+    due_date: datetime
+    max_marks: int
+    student_id: Optional[str] = None
+    student_name: Optional[str] = None
+    status: str
+    obtained_marks: Optional[int] = None
+    feedback: Optional[str] = None
+    created_at: datetime
+
+
+class RatingCreate(BaseModel):
+    tutor_id: str
+    tutor_name: str
+    booking_id: Optional[str] = None
+    subject: str
+    rating: int
+    comment: str
+    session_date: Optional[datetime] = None
+
+
+class RatingResponse(BaseModel):
+    id: str
+    tutor_id: str
+    tutor_name: str
+    student_id: str
+    student_name: str
+    subject: str
+    rating: int
+    comment: str
+    session_date: Optional[datetime] = None
+    created_at: datetime
+
+
+# ============== MATERIALS ROUTES ==============
+
+@router.post("/materials", response_model=MaterialResponse)
+async def create_material(
+    title: str = Form(...),
+    description: str = Form(...),
+    subject: str = Form(...),
+    file: Optional[UploadFile] = File(None),
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new material (tutor only)"""
+    if current_user.role != "tutor":
+        raise HTTPException(status_code=403, detail="Only tutors can create materials")
+
+    file_url = None
+    file_name = None
+    file_type = None
+
+    if file:
+        # Upload to MinIO
+        result = await minio_service.upload_file(
+            file=file,
+            folder=f"materials/{current_user.id}"
+        )
+        if result:
+            file_url = result["url"]
+            file_name = file.filename
+            file_type = file.content_type
+
+    material = Material(
+        tutor_id=str(current_user.id),
+        tutor_name=current_user.full_name,
+        title=title,
+        description=description,
+        subject=subject,
+        file_url=file_url,
+        file_name=file_name,
+        file_type=file_type
+    )
+    await material.insert()
+
+    return MaterialResponse(
+        id=str(material.id),
+        tutor_id=material.tutor_id,
+        tutor_name=material.tutor_name,
+        title=material.title,
+        description=material.description,
+        subject=material.subject,
+        file_url=material.file_url,
+        file_name=material.file_name,
+        file_type=material.file_type,
+        created_at=material.created_at
+    )
+
+
+@router.get("/materials", response_model=List[MaterialResponse])
+async def get_materials(current_user: User = Depends(get_current_user)):
+    """Get materials - tutors see their own, students see all"""
+    if current_user.role == "tutor":
+        materials = await Material.find(Material.tutor_id == str(current_user.id)).to_list()
+    else:
+        materials = await Material.find_all().to_list()
+
+    return [
+        MaterialResponse(
+            id=str(m.id),
+            tutor_id=m.tutor_id,
+            tutor_name=m.tutor_name,
+            title=m.title,
+            description=m.description,
+            subject=m.subject,
+            file_url=m.file_url,
+            file_name=m.file_name,
+            file_type=m.file_type,
+            created_at=m.created_at
+        )
+        for m in materials
+    ]
+
+
+@router.delete("/materials/{material_id}")
+async def delete_material(material_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a material (tutor only, own materials)"""
+    material = await Material.get(material_id)
+    if not material:
+        raise HTTPException(status_code=404, detail="Material not found")
+
+    if material.tutor_id != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized to delete this material")
+
+    # Delete file from MinIO if exists
+    if material.file_url:
+        try:
+            await minio_service.delete_file(material.file_url)
+        except:
+            pass
+
+    await material.delete()
+    return {"message": "Material deleted successfully"}
+
+
+# ============== ASSIGNMENTS ROUTES ==============
+
+@router.post("/assignments", response_model=AssignmentResponse)
+async def create_assignment(
+    data: AssignmentCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new assignment (tutor only)"""
+    if current_user.role != "tutor":
+        raise HTTPException(status_code=403, detail="Only tutors can create assignments")
+
+    assignment = Assignment(
+        tutor_id=str(current_user.id),
+        tutor_name=current_user.full_name,
+        title=data.title,
+        description=data.description,
+        subject=data.subject,
+        due_date=data.due_date,
+        max_marks=data.max_marks,
+        student_id=data.student_id
+    )
+    await assignment.insert()
+
+    return AssignmentResponse(
+        id=str(assignment.id),
+        tutor_id=assignment.tutor_id,
+        tutor_name=assignment.tutor_name,
+        title=assignment.title,
+        description=assignment.description,
+        subject=assignment.subject,
+        due_date=assignment.due_date,
+        max_marks=assignment.max_marks,
+        student_id=assignment.student_id,
+        student_name=assignment.student_name,
+        status=assignment.status,
+        obtained_marks=assignment.obtained_marks,
+        feedback=assignment.feedback,
+        created_at=assignment.created_at
+    )
+
+
+@router.get("/assignments", response_model=List[AssignmentResponse])
+async def get_assignments(current_user: User = Depends(get_current_user)):
+    """Get assignments - tutors see their own, students see assigned to them"""
+    if current_user.role == "tutor":
+        assignments = await Assignment.find(Assignment.tutor_id == str(current_user.id)).to_list()
+    else:
+        # Students see all assignments (or could filter by student_id if assigned)
+        assignments = await Assignment.find_all().to_list()
+
+    return [
+        AssignmentResponse(
+            id=str(a.id),
+            tutor_id=a.tutor_id,
+            tutor_name=a.tutor_name,
+            title=a.title,
+            description=a.description,
+            subject=a.subject,
+            due_date=a.due_date,
+            max_marks=a.max_marks,
+            student_id=a.student_id,
+            student_name=a.student_name,
+            status=a.status,
+            obtained_marks=a.obtained_marks,
+            feedback=a.feedback,
+            created_at=a.created_at
+        )
+        for a in assignments
+    ]
+
+
+@router.delete("/assignments/{assignment_id}")
+async def delete_assignment(assignment_id: str, current_user: User = Depends(get_current_user)):
+    """Delete an assignment (tutor only)"""
+    assignment = await Assignment.get(assignment_id)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    if assignment.tutor_id != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized to delete this assignment")
+
+    await assignment.delete()
+    return {"message": "Assignment deleted successfully"}
+
+
+# ============== RATINGS ROUTES ==============
+
+@router.post("/ratings", response_model=RatingResponse)
+async def create_rating(
+    data: RatingCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a rating for a tutor (student only)"""
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="Only students can rate tutors")
+
+    # Check if already rated this tutor for this booking
+    if data.booking_id:
+        existing = await TutorRating.find_one(
+            TutorRating.student_id == str(current_user.id),
+            TutorRating.booking_id == data.booking_id
+        )
+        if existing:
+            raise HTTPException(status_code=400, detail="You have already rated this session")
+
+    rating = TutorRating(
+        tutor_id=data.tutor_id,
+        tutor_name=data.tutor_name,
+        student_id=str(current_user.id),
+        student_name=current_user.full_name,
+        booking_id=data.booking_id,
+        subject=data.subject,
+        rating=data.rating,
+        comment=data.comment,
+        session_date=data.session_date
+    )
+    await rating.insert()
+
+    return RatingResponse(
+        id=str(rating.id),
+        tutor_id=rating.tutor_id,
+        tutor_name=rating.tutor_name,
+        student_id=rating.student_id,
+        student_name=rating.student_name,
+        subject=rating.subject,
+        rating=rating.rating,
+        comment=rating.comment,
+        session_date=rating.session_date,
+        created_at=rating.created_at
+    )
+
+
+@router.get("/ratings/my", response_model=List[RatingResponse])
+async def get_my_ratings(current_user: User = Depends(get_current_user)):
+    """Get ratings - students see ratings they gave, tutors see ratings they received"""
+    if current_user.role == "student":
+        ratings = await TutorRating.find(TutorRating.student_id == str(current_user.id)).to_list()
+    else:
+        ratings = await TutorRating.find(TutorRating.tutor_id == str(current_user.id)).to_list()
+
+    return [
+        RatingResponse(
+            id=str(r.id),
+            tutor_id=r.tutor_id,
+            tutor_name=r.tutor_name,
+            student_id=r.student_id,
+            student_name=r.student_name,
+            subject=r.subject,
+            rating=r.rating,
+            comment=r.comment,
+            session_date=r.session_date,
+            created_at=r.created_at
+        )
+        for r in ratings
+    ]
+
+
+@router.get("/ratings/tutor/{tutor_id}", response_model=List[RatingResponse])
+async def get_tutor_ratings(tutor_id: str):
+    """Get all ratings for a specific tutor (public)"""
+    ratings = await TutorRating.find(TutorRating.tutor_id == tutor_id).to_list()
+
+    return [
+        RatingResponse(
+            id=str(r.id),
+            tutor_id=r.tutor_id,
+            tutor_name=r.tutor_name,
+            student_id=r.student_id,
+            student_name=r.student_name,
+            subject=r.subject,
+            rating=r.rating,
+            comment=r.comment,
+            session_date=r.session_date,
+            created_at=r.created_at
+        )
+        for r in ratings
+    ]

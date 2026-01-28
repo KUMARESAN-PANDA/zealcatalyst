@@ -818,4 +818,113 @@ export const withdrawalAPI = {
   },
 };
 
+// Materials API Types
+export interface MaterialResponse {
+  id: string;
+  tutor_id: string;
+  tutor_name: string;
+  title: string;
+  description: string;
+  subject: string;
+  file_url?: string;
+  file_name?: string;
+  file_type?: string;
+  created_at: string;
+}
+
+export interface AssignmentResponse {
+  id: string;
+  tutor_id: string;
+  tutor_name: string;
+  title: string;
+  description: string;
+  subject: string;
+  due_date: string;
+  max_marks: number;
+  student_id?: string;
+  student_name?: string;
+  status: string;
+  obtained_marks?: number;
+  feedback?: string;
+  created_at: string;
+}
+
+export interface RatingResponse {
+  id: string;
+  tutor_id: string;
+  tutor_name: string;
+  student_id: string;
+  student_name: string;
+  subject: string;
+  rating: number;
+  comment: string;
+  session_date?: string;
+  created_at: string;
+}
+
+// Materials & Learning API
+export const materialsAPI = {
+  // Materials
+  createMaterial: async (data: FormData): Promise<MaterialResponse> => {
+    const response = await api.post('/materials', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  getMaterials: async (): Promise<MaterialResponse[]> => {
+    const response = await api.get('/materials');
+    return response.data;
+  },
+
+  deleteMaterial: async (id: string): Promise<void> => {
+    await api.delete(`/materials/${id}`);
+  },
+
+  // Assignments
+  createAssignment: async (data: {
+    title: string;
+    description: string;
+    subject: string;
+    due_date: string;
+    max_marks: number;
+  }): Promise<AssignmentResponse> => {
+    const response = await api.post('/assignments', data);
+    return response.data;
+  },
+
+  getAssignments: async (): Promise<AssignmentResponse[]> => {
+    const response = await api.get('/assignments');
+    return response.data;
+  },
+
+  deleteAssignment: async (id: string): Promise<void> => {
+    await api.delete(`/assignments/${id}`);
+  },
+
+  // Ratings
+  createRating: async (data: {
+    tutor_id: string;
+    tutor_name: string;
+    booking_id?: string;
+    subject: string;
+    rating: number;
+    comment: string;
+    session_date?: string;
+  }): Promise<RatingResponse> => {
+    const response = await api.post('/ratings', data);
+    return response.data;
+  },
+
+  getMyRatings: async (): Promise<RatingResponse[]> => {
+    const response = await api.get('/ratings/my');
+    return response.data;
+  },
+
+  getTutorRatings: async (tutorId: string): Promise<RatingResponse[]> => {
+    const response = await api.get(`/ratings/tutor/${tutorId}`);
+    return response.data;
+  },
+};
+
 export default api;

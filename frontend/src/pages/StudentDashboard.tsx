@@ -6,8 +6,8 @@ import {
   FileText, Star, MessageSquare, Play, Download, BookOpen
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { bookingsAPI } from '../services/api';
-import type { BookingResponse } from '../services/api';
+import { bookingsAPI, materialsAPI } from '../services/api';
+import type { BookingResponse, MaterialResponse, RatingResponse } from '../services/api';
 
 // Types for new features
 interface RecordedSession {
@@ -54,15 +54,36 @@ const StudentDashboard: React.FC = () => {
 
   // New state for recordings, materials, and feedback
   const [recordings] = useState<RecordedSession[]>([]);
-  const [materials] = useState<StudyMaterial[]>([]);
-  const [myRatings, setMyRatings] = useState<TutorRating[]>([]);
+  const [materials, setMaterials] = useState<MaterialResponse[]>([]);
+  const [myRatings, setMyRatings] = useState<RatingResponse[]>([]);
   const [showRatingModal, setShowRatingModal] = useState(false);
-  const [ratingForm, setRatingForm] = useState({ tutor_name: '', subject: '', rating: 5, comment: '' });
+  const [ratingForm, setRatingForm] = useState({ tutor_id: '', tutor_name: '', subject: '', rating: 5, comment: '' });
   const [selectedBookingForRating, setSelectedBookingForRating] = useState<BookingResponse | null>(null);
+  const [ratingLoading, setRatingLoading] = useState(false);
 
   useEffect(() => {
     fetchBookings();
+    fetchMaterials();
+    fetchMyRatings();
   }, []);
+
+  const fetchMaterials = async () => {
+    try {
+      const data = await materialsAPI.getMaterials();
+      setMaterials(data);
+    } catch (error) {
+      console.error('Failed to fetch materials:', error);
+    }
+  };
+
+  const fetchMyRatings = async () => {
+    try {
+      const data = await materialsAPI.getMyRatings();
+      setMyRatings(data);
+    } catch (error) {
+      console.error('Failed to fetch ratings:', error);
+    }
+  };
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -540,6 +561,7 @@ const StudentDashboard: React.FC = () => {
                           onClick={() => {
                             setSelectedBookingForRating(booking);
                             setRatingForm({
+                              tutor_id: booking.tutor_id || '',
                               tutor_name: booking.tutor_name || 'Tutor',
                               subject: booking.subject,
                               rating: 5,
@@ -612,26 +634,35 @@ const StudentDashboard: React.FC = () => {
                       Cancel
                     </button>
                     <button
-                      onClick={() => {
-                        const newRating: TutorRating = {
-                          id: Date.now().toString(),
-                          tutor_id: selectedBookingForRating?.id || '',
-                          tutor_name: ratingForm.tutor_name,
-                          subject: ratingForm.subject,
-                          rating: ratingForm.rating,
-                          comment: ratingForm.comment,
-                          session_date: selectedBookingForRating?.scheduled_at || new Date().toISOString(),
-                          created_at: new Date().toISOString()
-                        };
-                        setMyRatings([newRating, ...myRatings]);
-                        setShowRatingModal(false);
-                        setSelectedBookingForRating(null);
-                        setMessage({ type: 'success', text: 'Thank you for your feedback!' });
-                        setTimeout(() => setMessage(null), 3000);
+                      onClick={async () => {
+                        setRatingLoading(true);
+                        try {
+                          const newRating = await materialsAPI.createRating({
+                            tutor_id: ratingForm.tutor_id,
+                            tutor_name: ratingForm.tutor_name,
+                            booking_id: selectedBookingForRating?.id,
+                            subject: ratingForm.subject,
+                            rating: ratingForm.rating,
+                            comment: ratingForm.comment,
+                            session_date: selectedBookingForRating?.scheduled_at
+                          });
+                          setMyRatings([newRating, ...myRatings]);
+                          setShowRatingModal(false);
+                          setSelectedBookingForRating(null);
+                          setMessage({ type: 'success', text: 'Thank you for your feedback!' });
+                          setTimeout(() => setMessage(null), 3000);
+                        } catch (error) {
+                          console.error('Failed to submit rating:', error);
+                          setMessage({ type: 'error', text: 'Failed to submit rating. Please try again.' });
+                          setTimeout(() => setMessage(null), 3000);
+                        } finally {
+                          setRatingLoading(false);
+                        }
                       }}
-                      className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium"
+                      disabled={ratingLoading}
+                      className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium disabled:opacity-50"
                     >
-                      Submit Rating
+                      {ratingLoading ? 'Submitting...' : 'Submit Rating'}
                     </button>
                   </div>
                 </motion.div>
