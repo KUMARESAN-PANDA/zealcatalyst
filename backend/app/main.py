@@ -4,10 +4,16 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.database import connect_to_mongo, close_mongo_connection
 from app.routes import api_router
+import traceback
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await connect_to_mongo()
+    try:
+        await connect_to_mongo()
+        print("Database connected successfully")
+    except Exception as e:
+        print(f"Failed to connect to database: {e}")
+        traceback.print_exc()
     yield
     await close_mongo_connection()
 
@@ -40,3 +46,25 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.get("/api/debug/status")
+async def debug_status():
+    """Debug endpoint to check service status"""
+    from app.core.database import client
+    status = {
+        "app": "running",
+        "database": "unknown",
+        "config": {
+            "database_name": settings.DATABASE_NAME,
+            "minio_endpoint": settings.MINIO_ENDPOINT,
+        }
+    }
+    try:
+        if client:
+            await client.admin.command('ping')
+            status["database"] = "connected"
+        else:
+            status["database"] = "not initialized"
+    except Exception as e:
+        status["database"] = f"error: {str(e)}"
+    return status
